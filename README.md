@@ -41,5 +41,3 @@ npm run dev
 ## Autor
 angel lopez 
 
-## Licencia
-MIT 
