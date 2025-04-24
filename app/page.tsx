@@ -1,4 +1,4 @@
-import DashboardVentas from "@/components/dashboard-ventas"
+import { DashboardVentas } from "@/components/dashboard-ventas"
 
 export default function Home() {
   return (

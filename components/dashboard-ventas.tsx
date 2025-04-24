@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { GraficoBarras } from "@/components/grafico-barras"
-import GraficoCircular from "@/components/grafico-circular"
+import { GraficoCircular } from "@/components/grafico-circular"
 
 interface DatosSemanales {
   semana: string
@@ -12,8 +12,8 @@ interface DatosSemanales {
 }
 
 interface DatosCategorias {
-  categoria: string
-  valor: number
+  name: string
+  value: number
 }
 
 // Datos por defecto para mostrar mientras se cargan los reales
@@ -23,45 +23,71 @@ const DATOS_SEMANALES_FIJOS: DatosSemanales[] = [
 ];
 
 const DATOS_CATEGORIAS_FIJOS: DatosCategorias[] = [
-  { categoria: 'cargador ', valor: 70.9 },
-  { categoria: 'USB ', valor: 18.6 },
-  { categoria: 'pc ', valor: 10.5 }
+  { name: 'cargador ', value: 70.9 },
+  { name: 'USB ', value: 18.6 },
+  { name: 'pc ', value: 10.5 }
 ];
 
-export default function DashboardVentas() {
+const DATOS_SEMANALES_DEFAULT: DatosSemanales[] = [
+  { semana: "Semana 1", ventas: 0 },
+  { semana: "Semana 2", ventas: 0 },
+  { semana: "Semana 3", ventas: 0 },
+  { semana: "Semana 4", ventas: 0 },
+];
+
+const DATOS_CATEGORIAS_DEFAULT: DatosCategorias[] = [
+  { name: "Categoría 1", value: 0 },
+  { name: "Categoría 2", value: 0 },
+  { name: "Categoría 3", value: 0 },
+];
+
+export function DashboardVentas() {
   const isMounted = useRef(true);
   const fetchTimerRef = useRef<NodeJS.Timeout | null>(null); 
   
-  const [datosSemanales, setDatosSemanales] = useState<DatosSemanales[]>(DATOS_SEMANALES_FIJOS);
-  const [datosCategorias, setDatosCategorias] = useState<DatosCategorias[]>(DATOS_CATEGORIAS_FIJOS);
+  const [datosSemanales, setDatosSemanales] = useState<DatosSemanales[]>(DATOS_SEMANALES_DEFAULT);
+  const [datosCategorias, setDatosCategorias] = useState<DatosCategorias[]>(DATOS_CATEGORIAS_DEFAULT);
+  const [activeTab, setActiveTab] = useState("graficos");
   const [cargando, setCargando] = useState(false);
 
   // Solo actualizamos los datos si realmente hay diferencias significativas
-  const actualizarDatosCategorias = useCallback((nuevosDatos: DatosCategorias[]) => {
+  const actualizarDatosCategorias = useCallback((nuevosDatos: any[]) => {
     if (!nuevosDatos || nuevosDatos.length === 0) return;
+    
+    // Convertir los datos al formato esperado por el componente
+    const datosFormateados = nuevosDatos.map(item => ({
+      name: item.categoria,
+      value: parseFloat(item.valor)
+    }));
     
     // Solo actualiza si realmente hay cambios significativos
     const hayDiferencias = 
-      nuevosDatos.length !== datosCategorias.length || 
-      nuevosDatos.some((item, index) => {
+      datosFormateados.length !== datosCategorias.length || 
+      datosFormateados.some((item, index) => {
         const itemActual = datosCategorias[index];
         return !itemActual || 
-               item.categoria !== itemActual.categoria || 
-               Math.abs(Number(item.valor) - Number(itemActual.valor)) > 0.5;
+               item.name !== itemActual.name || 
+               Math.abs(Number(item.value) - Number(itemActual.value)) > 0.5;
       });
     
     if (hayDiferencias) {
-      setDatosCategorias(nuevosDatos);
+      setDatosCategorias(datosFormateados);
     }
   }, [datosCategorias]);
 
-  const actualizarDatosSemanales = useCallback((nuevosDatos: DatosSemanales[]) => {
+  const actualizarDatosSemanales = useCallback((nuevosDatos: any[]) => {
     if (!nuevosDatos || nuevosDatos.length === 0) return;
+    
+    // Convertir los datos al formato esperado por el componente
+    const datosFormateados = nuevosDatos.map(item => ({
+      semana: `Semana ${item.semana}`,
+      ventas: parseFloat(item.ventas)
+    }));
     
     // Solo actualiza si hay diferencias significativas
     const hayDiferencias = 
-      nuevosDatos.length !== datosSemanales.length || 
-      nuevosDatos.some((item, index) => {
+      datosFormateados.length !== datosSemanales.length || 
+      datosFormateados.some((item, index) => {
         const itemActual = datosSemanales[index];
         return !itemActual || 
                item.semana !== itemActual.semana || 
@@ -69,143 +95,182 @@ export default function DashboardVentas() {
       });
     
     if (hayDiferencias) {
-      setDatosSemanales(nuevosDatos);
+      setDatosSemanales(datosFormateados);
     }
   }, [datosSemanales]);
 
-  const fetchData = useCallback(async () => {
+  const actualizarDatos = useCallback(async () => {
     if (!isMounted.current) return;
     
     try {
       // Usamos el estado cargando solo internamente para no afectar la UI
       setCargando(true);
       
-      // Carga datos semanales
-      try {
-        const resVentas = await fetch("/api/ventas");
-        if (resVentas.ok) {
-          const dataVentas = await resVentas.json();
-          if (Array.isArray(dataVentas) && dataVentas.length > 0) {
-            const transformados = dataVentas.map((item: any) => ({
-              semana: `Semana ${item.semana}`,
-              ventas: item.ventas
-            }));
-            actualizarDatosSemanales(transformados);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching ventas data:", err);
+      const [ventasRes, categoriasRes] = await Promise.all([
+        fetch("/api/ventas"),
+        fetch("/api/ventas/Categorias")
+      ]);
+
+      const [ventasData, categoriasData] = await Promise.all([
+        ventasRes.json(),
+        categoriasRes.json()
+      ]);
+
+      if (ventasData?.length) {
+        actualizarDatosSemanales(ventasData);
       }
-      
-      // Carga datos por categoría
-      try {
-        const resCategorias = await fetch("/api/ventas/Categorias");
-        if (resCategorias.ok) {
-          const dataCategorias = await resCategorias.json();
-          if (Array.isArray(dataCategorias) && dataCategorias.length > 0) {
-            actualizarDatosCategorias(dataCategorias);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching categorias data:", err);
+      if (categoriasData?.length) {
+        actualizarDatosCategorias(categoriasData);
       }
     } catch (error) {
-      console.error("Error general:", error);
+      console.error("Error al actualizar datos:", error);
     } finally {
       if (isMounted.current) {
         setCargando(false);
       }
     }
-  }, [actualizarDatosSemanales, actualizarDatosCategorias]);
+  }, [actualizarDatosCategorias, actualizarDatosSemanales]);
 
   useEffect(() => {
     isMounted.current = true;
     
     // Cargar datos iniciales
-    fetchData();
+    actualizarDatos();
+    
+    // Configurar actualización periódica (cada 5 minutos)
+    fetchTimerRef.current = setInterval(actualizarDatos, 5 * 60 * 1000);
     
     // Limpieza al desmontar
     return () => {
       isMounted.current = false;
       if (fetchTimerRef.current) {
-        clearTimeout(fetchTimerRef.current);
+        clearInterval(fetchTimerRef.current);
       }
     }
-  }, [fetchData]);
+  }, [actualizarDatos]);
 
   return (
-    <div className="flex flex-col space-y-6">
-      <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard de Ventas</h1>
-        <p className="text-muted-foreground">Análisis de ventas semanales y distribución por categoría</p>
+    <div className="p-4">
+      <div className="mb-4">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab("graficos")}
+              className={`${
+                activeTab === "graficos"
+                  ? "border-orange-500 text-orange-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Gráficos
+            </button>
+            <button
+              onClick={() => setActiveTab("datos")}
+              className={`${
+                activeTab === "datos"
+                  ? "border-orange-500 text-orange-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Datos
+            </button>
+          </nav>
+        </div>
       </div>
 
-      <Tabs defaultValue="graficos" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="graficos">Gráficos</TabsTrigger>
-          <TabsTrigger value="datos">Datos</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="graficos" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ventas por Semana</CardTitle>
-                <CardDescription>Total de ventas registradas por semana</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[400px]">
-                <GraficoBarras datos={datosSemanales} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Distribución de Ventas</CardTitle>
-                <CardDescription>Porcentaje de ventas por categoría de producto</CardDescription>
-              </CardHeader>
-              <CardContent style={{ height: '400px', padding: '1rem' }}>
-                <GraficoCircular datos={datosCategorias} />
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="datos" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Datos de Ventas Semanales</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {datosSemanales.map((item) => (
-                    <div key={item.semana} className="flex justify-between items-center border-b pb-2">
-                      <span className="font-medium">{item.semana}</span>
-                      <span className="text-green-600 font-semibold">S/.{item.ventas.toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Datos de Ventas por Categoría</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {datosCategorias.map((item) => (
-                    <div key={item.categoria} className="flex justify-between items-center border-b pb-2">
-                      <span className="font-medium">{item.categoria}</span>
-                      <span className="text-green-600 font-semibold">{item.valor}%</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+      {activeTab === "graficos" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Ventas Semanales</CardTitle>
+              <CardDescription>Distribución de ventas por semana</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <GraficoBarras datos={datosSemanales} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Ventas por Categoría</CardTitle>
+              <CardDescription>Distribución de ventas por categoría de producto</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <GraficoCircular datos={datosCategorias} />
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Ventas Semanales</CardTitle>
+              <CardDescription>Datos detallados de ventas por semana</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Semana
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ventas
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {datosSemanales.map((item, index) => (
+                      <tr key={index}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.semana}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                          S/.{item.ventas.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Ventas por Categoría</CardTitle>
+              <CardDescription>Datos detallados de ventas por categoría</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Categoría
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Valor
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {datosCategorias.map((item, index) => (
+                      <tr key={index}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                          S/.{item.value.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

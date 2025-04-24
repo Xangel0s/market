@@ -1,92 +1,104 @@
 'use client';
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { useMemo, useState, useEffect } from 'react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
-const COLORS = ['#2196F3', '#4CAF50', '#FFC107', '#FF5722', '#9C27B0'];
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
-interface DatosCategoria {
-  categoria: string;
-  valor: number;
+interface DatosCategorias {
+  name: string;
+  value: number;
 }
 
-export default function GraficoCircular({ datos }: { datos: DatosCategoria[] }) {
-  // Mantenemos datos anteriores para transiciones suaves
-  const [datosEstables, setDatosEstables] = useState<DatosCategoria[]>(datos || []);
-  
-  // Procesamos los datos numéricos una sola vez
-  const datosNumericos = useMemo(() => {
-    if (!datosEstables || datosEstables.length === 0) return [];
-    
-    return datosEstables.map(item => ({
-      ...item,
-      valor: typeof item.valor === 'string' ? parseFloat(item.valor) : item.valor
-    }));
-  }, [datosEstables]);
-  
-  // Actualizamos los datos estables solo cuando hay cambios significativos
-  useEffect(() => {
-    if (!datos || datos.length === 0) return;
-    
-    // Verificamos si hay cambios significativos para prevenir renderizados innecesarios
-    const hayDiferencias = 
-      datos.length !== datosEstables.length || 
-      datos.some((item, index) => {
-        if (index >= datosEstables.length) return true;
-        return item.categoria !== datosEstables[index].categoria ||
-               Math.abs(Number(item.valor) - Number(datosEstables[index].valor)) > 0.1;
-      });
-    
-    if (hayDiferencias) {
-      setDatosEstables(datos);
-    }
-  }, [datos, datosEstables]);
+interface GraficoCircularProps {
+  datos: DatosCategorias[];
+}
 
-  if (datosNumericos.length === 0) {
+// Definir la interfaz para los props del label
+interface PieChartLabelProps {
+  name: string;
+  percent: number;
+}
+
+export function GraficoCircular({ datos }: GraficoCircularProps) {
+  if (!datos?.length) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <p>No hay datos disponibles</p>
+      <div className="flex items-center justify-center h-[400px] text-gray-500">
+        No hay datos disponibles para mostrar
       </div>
     );
   }
 
+  const total = datos.reduce((sum, item) => sum + item.value, 0);
+
+  // Ordenar las categorías por porcentaje (de mayor a menor)
+  const datosOrdenados = [...datos].sort((a, b) => b.value - a.value);
+
+  // Añadir porcentaje al nombre para la leyenda
+  const datosConPorcentaje = datosOrdenados.map(item => ({
+    ...item,
+    porcentaje: (item.value / total) * 100,
+    nombreConPorcentaje: `${item.name} (${((item.value / total) * 100).toFixed(1)}%)`
+  }));
+
+  // Función para renderizar las etiquetas con el porcentaje
+  const renderLabel = (props: PieChartLabelProps): string => {
+    return `${(props.percent * 100).toFixed(0)}%`;
+  };
+
+  // Crear un resumen de recomendación basado en los porcentajes
+  const categoriasPrincipales = datosConPorcentaje
+    .filter(item => item.porcentaje >= 10) // Solo categorías con más del 10%
+    .map(item => item.name)
+    .join(', ');
+
+  const recomendacion = categoriasPrincipales 
+    ? `Principales: ${categoriasPrincipales}`
+    : 'No hay categorías destacadas';
+
   return (
-    <div style={{ width: '100%', height: 400, position: 'relative' }}>
-      <ResponsiveContainer>
-        <PieChart>
-          <Pie
-            data={datosNumericos}
-            cx="50%"
-            cy="50%"
-            labelLine={true}
-            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
-            outerRadius={120}
-            innerRadius={60}
-            fill="#8884d8"
-            dataKey="valor"
-            nameKey="categoria"
-            isAnimationActive={false}
-          >
-            {datosNumericos.map((entry, index) => (
-              <Cell 
-                key={`cell-${index}-${entry.categoria}`} 
-                fill={COLORS[index % COLORS.length]} 
-              />
-            ))}
-          </Pie>
-          <Tooltip
-            formatter={(value: number) => `${value.toFixed(1)}%`}
-            contentStyle={{
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              padding: '8px 12px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              border: 'none'
-            }}
-            animationDuration={0}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+    <div className="flex flex-col">
+      <div className="h-[400px] w-full mb-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={datosConPorcentaje}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={renderLabel}
+              outerRadius={140}
+              fill="#8884d8"
+              dataKey="value"
+              nameKey="nombreConPorcentaje"
+              paddingAngle={1}
+            >
+              {datosConPorcentaje.map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={COLORS[index % COLORS.length]}
+                  className="hover:opacity-80 transition-opacity"
+                />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value: number, name: string, props: any) => {
+                const porcentaje = ((value / total) * 100).toFixed(1);
+                return [`S/.${value.toLocaleString()} (${porcentaje}%)`, props.payload.name];
+              }}
+              contentStyle={{
+                backgroundColor: 'white',
+                border: '1px solid #E5E7EB',
+                borderRadius: '0.375rem',
+                padding: '0.5rem'
+              }}
+            />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="py-2 px-4 text-center text-green-600 font-medium bg-white rounded-md shadow-sm border border-gray-100 mx-auto">
+        Total: 100% | {recomendacion}
+      </div>
     </div>
   );
 }
