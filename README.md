@@ -39,7 +39,7 @@ npm run dev
 - `/public` - Archivos estáticos
 
 ## Autor
-Miguel Yamil Ayma
+Angel lopez
 
 ## Licencia
 MIT 
