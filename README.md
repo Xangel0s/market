@@ -1,52 +1,45 @@
-# Hello 👋, I'm Yamil Ayma
+# Sistema de Gestión de Ventas - Minimarket
 
-<div align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=28&duration=3000&pause=1000&color=00FF00&center=true&vCenter=true&random=false&width=435&lines=I+Love+Programming;AI+Expert" alt="Typing SVG" />
-</div>
+## Descripción
+Sistema de gestión de ventas para minimarket desarrollado con Next.js, TypeScript y Tailwind CSS. Incluye visualización de datos mediante gráficos interactivos.
 
-## About Me:
+## Características
+- Dashboard con visualización de ventas semanales
+- Gráfico de barras para ventas por semana
+- Gráfico circular para distribución de ventas por categoría
+- Interfaz responsive y moderna
+- Actualización automática de datos
 
-🌎 I'm based in Lima, Peru.
+## Tecnologías
+- Next.js 15
+- TypeScript
+- Tailwind CSS
+- Recharts para visualización de datos
+- MySQL para base de datos
 
-🚀 Currently developing projects for my portfolio
+## Instalación
+```bash
+# Clonar el repositorio
+git clone https://github.com/tu-usuario/market.git
 
-🌱 I'm studying Full Stack Technologies, Automation and Artificial Intelligence
+# Instalar dependencias
+npm install
 
-🎯 I love creating projects and teaching what I learn
+# Configurar variables de entorno
+# Crear archivo .env.local con las credenciales de la base de datos
 
-## 🛠️ Technologies & Tools
+# Iniciar el servidor de desarrollo
+npm run dev
+```
 
-<p align="left">
-  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/javascript/javascript-original.svg" alt="javascript" width="40" height="40"/>
-  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/typescript/typescript-original.svg" alt="typescript" width="40" height="40"/>
-  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/react/react-original.svg" alt="react" width="40" height="40"/>
-  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/python/python-original.svg" alt="python" width="40" height="40"/>
-  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/nodejs/nodejs-original.svg" alt="nodejs" width="40" height="40"/>
-  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/mysql/mysql-original.svg" alt="mysql" width="40" height="40"/>
-</p>
+## Estructura del Proyecto
+- `/app` - Rutas y API
+- `/components` - Componentes React
+- `/lib` - Utilidades y configuración
+- `/public` - Archivos estáticos
 
-## 📊 GitHub Stats
+## Autor
+Miguel Yamil Ayma
 
-<div align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=yamilAyma&show_icons=true&theme=radical" alt="GitHub Stats" />
-</div>
-
-## 🌟 Featured Projects
-
-- 🚀 Sales Dashboard with Next.js
-- 🤖 AI Projects
-- 📊 Data Analysis Tools
-
-## 📫 Let's Connect!
-
-<p align="left">
-  <a href="https://linkedin.com/in/yamilAyma" target="_blank">
-    <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/>
-  </a>
-  <a href="https://github.com/yamilAyma" target="_blank">
-    <img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/>
-  </a>
-</p>
-
----
-⭐️ From [yamilAyma](https://github.com/yamilAyma) 
+## Licencia
+MIT 
